@@ -52,7 +52,7 @@ class WorldGenerator(object):
             world_color=self.world_color
         )
 
-    def __call__(self):
+    def __call__(self, *args, **kwargs):
         if self.mode is None:
             generator = self.generate_world
         elif self.mode == 'train':
@@ -62,7 +62,7 @@ class WorldGenerator(object):
         elif self.mode == 'test':
             generator = self.generate_test_world
 
-        world = generator()
+        world = generator(*args, **kwargs)
         return world
 
     def generate_world(self):
