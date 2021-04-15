@@ -1,6 +1,7 @@
 from random import random
+from typing import Dict
 from shapeworld import util
-from shapeworld.world import Entity
+from shapeworld.world import Entity, World
 from shapeworld.generators import GenericGenerator
 
 
@@ -80,12 +81,15 @@ class RandomAttributesGenerator(GenericGenerator):
             )
         )
 
-    def sample_entity(self, world, last_entity, combinations=None):
+    def sample_entity(self, world: World, last_entity, combinations=None, location_range:Dict=None):
         if last_entity == -1:
             self.provoke_collision = random() < self.provoke_collision_rate
         elif last_entity is not None:
             self.provoke_collision = random() < self.provoke_collision_rate
-        center = world.random_location(provoke_collision=self.provoke_collision)
+        if location_range is not None:
+            center = world.random_location(provoke_collision=self.provoke_collision, **location_range)
+        else:
+            center = world.random_location(provoke_collision=self.provoke_collision)
         if combinations is None:
             return Entity.random_instance(center=center, rotation=self.rotation, size_range=self.size_range, distortion_range=self.distortion_range, shade_range=self.shade_range, shapes=self.shapes, colors=self.colors, textures=self.textures)
         else:
