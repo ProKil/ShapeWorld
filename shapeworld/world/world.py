@@ -61,7 +61,7 @@ class World(Entity):
         for entity in self.entities:
             entity.draw(world_array=world_array, world_size=world_size, draw_fn=draw_fn)
 
-    def random_location(self, provoke_collision=False, min_distance=0.75):
+    def random_location(self, provoke_collision=False, min_distance=0.75, topleft=Point.zero, bottomright=Point.one):
         if isinstance(provoke_collision, Entity):
             entity = provoke_collision
             provoke_collision = True
@@ -73,7 +73,7 @@ class World(Entity):
             angle = Point.from_angle(angle=random())
             return entity.center + angle * entity.shape.size * (min_distance + random())
         else:
-            return Point.random_instance(Point.zero, Point.one)
+            return Point.random_instance(topleft, bottomright)
 
     def add_entity(self, entity, collision_tolerance=0.0, collision_shade_difference=0.5, boundary_tolerance=0.0):
         entity.id = len(self.entities)
