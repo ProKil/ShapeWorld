@@ -8,6 +8,8 @@ from random import randint, random, randrange, uniform
 import tarfile
 import time
 import zipfile
+import numpy as np
+from typing import Tuple
 
 
 _debug = False
@@ -388,3 +390,41 @@ class Archive(object):
                 filehandle.write(value)
             self.archive.add(filepath, filename)
             os.remove(filepath)
+
+def inside_square(point: Tuple[float, float], topleft: Tuple[float, float], bottomright: Tuple[float, float]) -> bool:
+    return topleft[0] <= point[0] + 0.5 <= bottomright[0] and topleft[1] <= point[1] + 0.5 <= bottomright[1]
+
+def inside_circle(point: Tuple[float, float], center: Tuple[float, float], radius: float) -> bool:
+    return (point[0] + 0.5 - center[0]) ** 2 + (point[1] + 0.5 - center[1]) ** 2 <= radius ** 2
+
+def draw(
+    image_array: np.array,
+    shape: str, 
+    border_color: np.array,
+    center: Tuple[float, float],
+    border_weight: float,
+    size: float
+    ) -> np.array:
+    assert border_weight > 0 and size > 0 and 0 <= center[0] <= 1 and 0 <= center[1] <= 1
+    H, W, _ = image_array.shape
+    if shape == "square":
+        center_x, center_y = center[0] * H, center[1] * W
+        topleft_outer = (center_x - size - border_weight / 2, center_y - size - border_weight / 2)
+        topleft_inner = (center_x - size + border_weight / 2, center_y - size + border_weight / 2)
+        bottomright_outer = (center_x + size + border_weight / 2, center_y + size + border_weight / 2)
+        bottomright_inner = (center_x + size - border_weight / 2, center_y + size - border_weight / 2)
+        for i in range(H):
+            for j in range(W):
+                if inside_square((i, j), topleft_outer, bottomright_outer) and not inside_square((i, j), topleft_inner, bottomright_inner):
+                    image_array[i][j] = border_color
+    elif shape == "circle":
+        center_ = (center[0] * H, center[1] * W)
+        radius_outer = size + border_weight / 2
+        radius_inner = size - border_weight / 2
+        for i in range(H):
+            for j in range(W):
+                if inside_circle((i, j), center_, radius_outer)  and not inside_circle((i, j), center_, radius_inner):
+                    image_array[i][j] = border_color
+    else:
+        raise NotImplementedError(shape)
+    return image_array

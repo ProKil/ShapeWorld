@@ -333,6 +333,8 @@ class Dataset(object):
                     batch[value_name] = [[np.zeros(shape=self.world_shape(), dtype=np.float32)] for _ in range(n)]
                 elif value_type == 'model' and include_model:
                     batch[value_name] = [[] for _ in range(n)]
+                elif value_type == 'language':
+                    batch[value_name] = [[] for _ in range(n)]
             else:
                 if value_type == 'int' and (value_name != 'alternatives' or alternatives):
                     batch[value_name] = np.zeros(shape=(n,), dtype=np.int32)
@@ -346,6 +348,8 @@ class Dataset(object):
                     batch[value_name] = np.zeros(shape=((n,) + self.world_shape()), dtype=np.float32)
                 elif value_type == 'model' and include_model:
                     batch[value_name] = [None] * n
+                elif value_type == 'language':
+                    batch[value_name] = [[] for _ in range(n)]
         return batch
 
     def generate(self, n, mode=None, include_model=False, alternatives=False):  # mode: None, 'train', 'validation', 'test'

@@ -53,14 +53,17 @@ class WorldGenerator(object):
         )
 
     def __call__(self, *args, **kwargs):
-        if self.mode is None:
-            generator = self.generate_world
-        elif self.mode == 'train':
-            generator = self.generate_train_world
-        elif self.mode == 'validation':
-            generator = self.generate_validation_world
-        elif self.mode == 'test':
-            generator = self.generate_test_world
+        try:
+            if self.mode is None:
+                generator = self.generate_world
+            elif self.mode == 'train':
+                generator = self.generate_train_world
+            elif self.mode == 'validation':
+                generator = self.generate_validation_world
+            elif self.mode == 'test':
+                generator = self.generate_test_world
+        except AttributeError as e:
+            raise AttributeError("Generater not initialized")
 
         world = generator(*args, **kwargs)
         return world
