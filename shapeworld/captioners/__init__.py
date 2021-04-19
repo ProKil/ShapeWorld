@@ -17,6 +17,7 @@ from shapeworld.captioners.conjunction import ConjunctionCaptioner
 from shapeworld.captioners.disjunction import DisjunctionCaptioner
 from shapeworld.captioners.implication import ImplicationCaptioner
 from shapeworld.captioners.equivalence import EquivalenceCaptioner
+from shapeworld.captioners.gen_nlvr import GenNLVRCaptioner
 
 
-__all__ = ['WorldCaptioner', 'CaptionerMixer', 'EmptyTypeCaptioner', 'RegularAttributeCaptioner', 'RegularTypeCaptioner', 'SingleAttributeTypeCaptioner', 'LabelAttributeCaptioner', 'UniqueTypeCaptioner', 'SelectorCaptioner', 'AttributeTypeRelationCaptioner', 'RelationCaptioner', 'NegationRelationCaptioner', 'ExistentialCaptioner', 'QuantifierCaptioner', 'NumberBoundCaptioner', 'ComparativeQuantifierCaptioner', 'ConjunctionCaptioner', 'DisjunctionCaptioner', 'ImplicationCaptioner', 'EquivalenceCaptioner']
+__all__ = ['WorldCaptioner', 'CaptionerMixer', 'EmptyTypeCaptioner', 'RegularAttributeCaptioner', 'RegularTypeCaptioner', 'SingleAttributeTypeCaptioner', 'LabelAttributeCaptioner', 'UniqueTypeCaptioner', 'SelectorCaptioner', 'AttributeTypeRelationCaptioner', 'RelationCaptioner', 'NegationRelationCaptioner', 'ExistentialCaptioner', 'QuantifierCaptioner', 'NumberBoundCaptioner', 'ComparativeQuantifierCaptioner', 'ConjunctionCaptioner', 'DisjunctionCaptioner', 'ImplicationCaptioner', 'EquivalenceCaptioner', GenNLVRCaptioner]
