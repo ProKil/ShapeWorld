@@ -1,9 +1,22 @@
+from io import BytesIO
+import os
+import pickle
 from random import randint
+
+import numpy as np
+from shapeworld.world.world import World
+from typing import OrderedDict
+from PIL import Image
+
+import tqdm
 from shapeworld.captioners.referential import ReferentialCaptioner
 from shapeworld.generators.meta_attributes import MetaGenerator
 from shapeworld import Dataset
 from shapeworld.generators import GeneratorMixer, RandomAttributesGenerator, ReinforcedAttributesGenerator
 from shapeworld.captioners import CaptionerMixer, EmptyTypeCaptioner, RegularAttributeCaptioner, RegularTypeCaptioner, UniqueTypeCaptioner, SelectorCaptioner, AttributeTypeRelationCaptioner, RelationCaptioner, ExistentialCaptioner, QuantifierCaptioner, ConjunctionCaptioner, DisjunctionCaptioner, ImplicationCaptioner, EquivalenceCaptioner
+
+import torch
+from torchvision import transforms
 
 class ReferentialGameDataset(Dataset):
     GENERATOR_INIT_FREQUENCY = 10
@@ -123,7 +136,7 @@ class ReferentialGameDataset(Dataset):
         # pn_size = self.vector_shape('caption_pn')[0]
 
         batch = self.zero_batch(n, include_model=include_model, alternatives=alternatives)
-        for i in range(n):
+        for i in tqdm.tqdm(range(n)):
 
             resample = 0
             caption = None
@@ -179,7 +192,7 @@ class ReferentialGameDataset(Dataset):
 
             batch['world'][i] = self.apply_pixel_noise(world=world.get_array(world_array=batch['world'][i]))
             if include_model:
-                batch['world_model'][i] = world
+                batch['world_model'][i] = world.model()
 
         # word2id = self.vocabularies['language']
         # unknown = word2id['[UNKNOWN]']
@@ -300,3 +313,38 @@ class ReferentialGameDataset(Dataset):
             data=''.join(data_html)
         )
         return html
+
+class ReferentialGamePyTorchDataset(torch.utils.data.Dataset):
+    def __init__(self, directory: str):
+        self.directory = directory
+        # with open(os.join.path(directory, "captions.txt"), "r") as f:
+        #     for line in f:
+        #         if line in ["", "\n"]:
+        #             break
+        #         self.captions.append(line.stripe())
+        # with open(os.join.path(directory, "worlds.pkl"), "rb") as f:
+        #     self.worlds = pickle.load(f)
+        with open(os.path.join(directory, "generated_middle.pkl"), "rb") as f:
+            self.data = pickle.load(f)
+        self.worlds = self.data['world']
+        self.world_models = self.data['world_model']
+        self.target_ids = self.data['target_id']
+        self.captions = self.data["caption"]
+        assert len(self.captions) == len(self.worlds)
+
+    def __getitem__(self, index: int):
+        input_image = World.get_image(self.worlds[index].transpose(1, 0, 2))
+        preprocess = transforms.Compose([
+            transforms.Resize(224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
+        image_tensor = preprocess(input_image)
+        return dict(
+            image_tensor=image_tensor,
+            caption=' '.join(self.captions[index]),
+            target_coordinates=np.array(list(self.world_models[index]["entities"][self.target_ids[index]]["center"].values()))
+        )
+
+    def __len__(self):
+        return len(self.captions)
