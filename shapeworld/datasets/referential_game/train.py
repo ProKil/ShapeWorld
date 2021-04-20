@@ -68,11 +68,11 @@ def train(model: RGListener, dataset: ReferentialGamePyTorchDataset,
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, pin_memory=True)
     running_average = 1
     for epoch in range(n_epochs):
-        pbar = tqdm.tqdm(dataloader, desc=f"{running_average=}")
+        pbar = tqdm.tqdm(dataloader, desc=f"running_average={running_average}")
         for batch in pbar:
             _, loss = model(batch["image_tensor"], batch["caption"], batch["target_coordinates"], training=True)
             running_average = running_average * 0.99 + loss * 0.01
-            pbar.set_description(f"{running_average=}")
+            pbar.set_description(f"running_average={running_average}")
         print(f"loss on dev set: {eval(model, eval_dataset)}")
 
         
