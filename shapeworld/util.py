@@ -10,6 +10,7 @@ import time
 import zipfile
 import numpy as np
 from typing import Tuple
+from copy import deepcopy
 
 
 _debug = False
@@ -406,6 +407,7 @@ def draw(
     size: float
     ) -> np.array:
     assert border_weight > 0 and size > 0 and 0 <= center[0] <= 1 and 0 <= center[1] <= 1
+    image_array = deepcopy(image_array)
     H, W, _ = image_array.shape
     if shape == "square":
         center_x, center_y = center[0] * H, center[1] * W
