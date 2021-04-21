@@ -23,6 +23,8 @@ class RGListener(nn.Module):
         # caption encoder
         self.tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
         self.bert = BertModel.from_pretrained("bert-base-uncased")
+        for param in self.bert.parameters():
+            param.requires_grad = False
 
         # regressor 
         self.regressor = nn.Sequential(
