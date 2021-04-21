@@ -12,15 +12,15 @@ class ReferentialCaptioner:
 
     # caption syntax:
     # <size> <color> [shape] <loc>
-    SIZE_DELIMITER = {(0, 0.2): "small", (0.2, 1.1): "big"}
+    SIZE_DELIMITER = {(0, 0.13): "small", (0.13, 1.1): "big"}
     CENTER_BOUNDARY = (0.4, 0.6)
 
     def __init__(
         self,
-        size_word_prob: float=0.3,
-        color_word_prob: float=0.3,
-        shape_word_prob: float=0.7,
-        location_word_prob: float=0.3,
+        size_word_prob: float=0.9,
+        color_word_prob: float=0.9,
+        shape_word_prob: float=0.9,
+        location_word_prob: float=0.9,
         absolute_location_prob: float=0.7
         ):
         self.size_word_prob = size_word_prob
