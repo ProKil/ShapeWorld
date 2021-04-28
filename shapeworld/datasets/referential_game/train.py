@@ -3,7 +3,7 @@ from shapeworld.datasets.referential_game.referential_game import ReferentialGam
 from typing import List, Tuple
 import torch
 from torch import nn
-from torch.nn.modules.loss import MSELoss
+from torch.nn.modules.loss import MSELoss, CrossEntropyLoss
 import torchvision.models as models
 
 from transformers import BertModel, BertTokenizerFast
@@ -54,12 +54,11 @@ class RGListener(nn.Module):
         super(RGListener, self).__init__()
 
         # image encoder
-        # resnet152 = models.resnet152(pretrained=True)
-        # modules=list(resnet152.children())[:-1]
-        # self.resnet152=nn.Sequential(*modules)
-        # for p in self.resnet152.parameters():
-        #     p.requires_grad = False
-        self.resnet152 = CoordConvNet()
+        self.image_encoder = nn.Sequential(
+            *list(models.resnet18(pretrained=True).children())[:-2])
+        
+        for p in self.image_encoder.parameters():
+            p.requires_grad_ = False
         
 
         # caption encoder
@@ -69,51 +68,63 @@ class RGListener(nn.Module):
             param.requires_grad = False
 
         # regressor
-        self.regressor = nn.Sequential(
-            nn.Linear(768+256, 128),
+        self.mlp = nn.Sequential(
+            nn.Linear(768, 256),
             nn.ReLU(),
-            nn.Linear(128, 128),
-            nn.ReLU(),
-            nn.Linear(128, 2),
-            nn.Sigmoid())
+            nn.Linear(256, 512)
+        )
 
         # trainer
-        self.loss_fn = MSELoss()
+        # self.loss_fn = MSELoss()
+        self.loss_fn = CrossEntropyLoss()
         self.optimizer = torch.optim.Adam(self.parameters())
 
-    def forward(self, images: torch.Tensor, text: List[str], target_coordinates: torch.Tensor, training: bool = False) -> Tuple[torch.Tensor, float]:
+    def forward(
+        self,
+        images: torch.Tensor,
+        text: List[str],
+        labels: torch.Tensor = None,
+        training: bool = False
+        ) -> Tuple[torch.Tensor, float]:
+
         tokenized_text = self.tokenizer(
             text, return_tensors="pt", padding=True).to('cuda')
         encoded_text = self.bert(**tokenized_text).pooler_output
 
-        encoded_images = self.resnet152(images.cuda()).squeeze()
+        encoded_images = self.image_encoder(images.cuda()).view(-1, 512, 7 * 7)
 
-        coordinates = self.regressor(
-            torch.cat([encoded_images, encoded_text], dim=-1))
-        loss = self.loss_fn(coordinates, target_coordinates.float().cuda())
+        logits = torch.matmul(self.mlp(encoded_text).unsqueeze(1), encoded_images).squeeze(1)
+
+        loss = self.loss_fn(logits, labels.cuda())
+        prediction = torch.argmax(logits, dim=-1).detach()
 
         if training:
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
-
-        return coordinates.detach(), loss.item()
-
+        
+        return prediction, loss
+        
+def quantize_coordinates(x: torch.Tensor):
+    return (x[:, 0] * 7).long() * 7 + (x[:, 1] * 7).long()
 
 def eval(model: RGListener, dataset: ReferentialGamePyTorchDataset, batch_size=128) -> float:
     with torch.no_grad():
         dataloader = torch.utils.data.DataLoader(
             dataset, batch_size=batch_size, pin_memory=True)
         losses = []
+        accuracies = []
         for batch in dataloader:
-            _, loss = model(batch["image_tensor"],
-                            batch["caption"], batch["target_coordinates"])
+            labels = quantize_coordinates(batch["target_coordinates"])
+            prediction, loss = model(batch["image_tensor"],
+                            batch["caption"], labels)
             losses.append(loss)
-        return sum(losses) / len(losses)
+            accuracies.append(torch.sum(prediction == labels.cuda()).item() / batch["image_tensor"].size()[0])
+        return sum(losses) / len(losses), sum(accuracies) / len(accuracies)
 
 
 def train(model: RGListener, dataset: ReferentialGamePyTorchDataset,
-          eval_dataset: ReferentialGamePyTorchDataset, batch_size=2048, n_epochs=100):
+          eval_dataset: ReferentialGamePyTorchDataset, batch_size=256, n_epochs=100):
     dataloader = torch.utils.data.DataLoader(
         dataset, batch_size=batch_size, pin_memory=True)
     running_average = 0.06
@@ -121,14 +132,15 @@ def train(model: RGListener, dataset: ReferentialGamePyTorchDataset,
         pbar = tqdm.tqdm(dataloader, desc=f"running_average={running_average}")
         for batch in pbar:
             _, loss = model(batch["image_tensor"], batch["caption"],
-                            batch["target_coordinates"], training=True)
+                            quantize_coordinates(batch["target_coordinates"]), training=True)
             running_average = running_average * 0.99 + loss * 0.01
             pbar.set_description(f"running_average={running_average}")
-        print(f"loss on dev set: {eval(model, eval_dataset)}")
+        print(f"dev set: {eval(model, eval_dataset)}")
 
 
 if __name__ == '__main__':
     model = RGListener().cuda()
+    # model.load_state_dict(torch.load("model.pt"))
     dataset = ReferentialGamePyTorchDataset(
         directory="/data/hzhu2/referential-game/train")
     eval_dataset = ReferentialGamePyTorchDataset(
