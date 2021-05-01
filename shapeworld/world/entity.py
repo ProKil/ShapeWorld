@@ -76,7 +76,18 @@ class Entity(object):
         self.topleft = topleft + center
         self.bottomright = bottomright + center
 
-    def draw(self, world_array, world_size, draw_fn=None):
+    def draw(self, world_array, world_size, draw_fn=None, using_cpp=True):
+        if using_cpp:
+            from drawcpp import draw
+            draw(world_array, (float(world_size.x), float(world_size.y)),
+                 (self.topleft.x, self.topleft.y),
+                 (self.bottomright.x, self.bottomright.y),
+                 tuple(self.color.get_color()),
+                 (self.center.x, self.center.y),
+                 self.shape.name,
+                 (self.rotation_sin, self.rotation_cos),
+                 (self.shape.size.x, self.shape.size.y))
+            return
         shift = Point(2.0 / world_size.x, 2.0 / world_size.y)
         scale = 1.0 + 2.0 * shift
         topleft = (((self.topleft) / scale) * world_size).max(Point.izero)  # + 0.5 * shift
