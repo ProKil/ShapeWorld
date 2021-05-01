@@ -326,7 +326,7 @@ class ReferentialGamePyTorchDataset(torch.utils.data.Dataset):
         #     self.worlds = pickle.load(f)
         with open(os.path.join(directory, "generated_middle.pkl"), "rb") as f:
             self.data = pickle.load(f)
-        self.worlds = self.data['world']
+        # self.worlds = self.data['world']
         self.world_models = self.data['world_model']
         self.target_ids = self.data['target_id']
         self.captions = self.data["caption"]

@@ -11,11 +11,9 @@ from shapeworld.util import draw
 if __name__ == '__main__':
     dataset = ReferentialGameDataset(world_size=224)
     generated = dataset.generate(1000000)
-    worlds = generated['world']
     world_models = generated['world_model']
     target_ids = generated['target_id']
     captions = generated["caption"]
-    generated.pop("world")
     directory = "/data/hzhu2/referential-game/train/"
     # directory = "./"
 
