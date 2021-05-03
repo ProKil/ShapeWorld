@@ -51,8 +51,12 @@ class ReferentialGameDataset(Dataset):
         caption_size=31,
         # vocabulary=('.', 'a', 'above', 'all', 'an', 'and', 'are', 'as', 'at', 'behind', 'below', 'besides', 'bigger', 'biggest', 'blue', 'but', 'circle', 'circles', 'closer', 'closest', 'color', 'cross', 'crosses', 'cyan', 'darker', 'darkest', 'different', 'eight', 'either', 'ellipse', 'ellipses', 'exactly', 'exists', 'farther', 'farthest', 'few', 'five', 'four', 'from', 'front', 'gray', 'green', 'half', 'if', 'in', 'is', 'least', 'left', 'leftmost', 'less', 'lighter', 'lightest', 'lower', 'lowermost', 'magenta', 'many', 'more', 'most', 'no', 'none', 'not', 'of', 'one', 'only', 'or', 'pentagon', 'pentagons', 'quarter', 'quarters', 'rectangle', 'rectangles', 'red', 'right', 'rightmost', 'same', 'semicircle', 'semicircles', 'seven', 'shape', 'shapes', 'six', 'smaller', 'smallest', 'square', 'squares', 'than', 'the', 'there', 'third', 'thirds', 'three', 'to', 'triangle', 'triangles', 'twice', 'two', 'upper', 'uppermost', 'yellow', 'zero'),
         pixel_noise_stddev=None,
+        render_images=False
     ):
-        values = dict(world_model='model', target_id='alternatives(int)', caption='language', caption_length='alternatives(int)')
+        if render_images:
+            values = dict(world='world', world_model='model', target_id='alternatives(int)', caption='language', caption_length='alternatives(int)')
+        else:
+            values = dict(world_model='model', target_id='alternatives(int)', caption='language', caption_length='alternatives(int)')
         vectors = dict(caption=caption_size)
         super(ReferentialGameDataset, self).__init__(values=values, world_size=world_size, vectors=vectors, pixel_noise_stddev=pixel_noise_stddev)
         
@@ -190,7 +194,8 @@ class ReferentialGameDataset(Dataset):
             batch['caption'][i] = caption
             batch['caption_length'][i] = len(caption)
 
-            # batch['world'][i] = self.apply_pixel_noise(world=world.get_array(world_array=batch['world'][i]))
+            if 'world' in batch:
+                batch['world'][i] = self.apply_pixel_noise(world=world.get_array(world_array=batch['world'][i]))
             if include_model:
                 batch['world_model'][i] = world.model()
 
