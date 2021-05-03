@@ -75,6 +75,8 @@ class RGListener(nn.Module):
         self.mlp = nn.Sequential(
             nn.Linear(768, 256),
             nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.ReLU(),
             nn.Linear(256, 576)
         )
 
@@ -133,7 +135,7 @@ def eval(model: RGListener, dataset: ReferentialGamePyTorchDataset, batch_size=1
 
 def train(model: RGListener, dataset: ReferentialGamePyTorchDataset,
           eval_dataset: ReferentialGamePyTorchDataset, batch_size=256,
-          n_epochs=2, eval_interval=400):
+          n_epochs=2, eval_interval=500):
     dataloader = torch.utils.data.DataLoader(
         dataset, batch_size=batch_size, shuffle=True, num_workers=6, pin_memory=True)
     running_average = 0.06
@@ -169,7 +171,7 @@ if __name__ == '__main__':
     dataset = ReferentialGamePyTorchDataset(
         directory="/data/hzhu2/referential-game/train",
         filename="generated_1M_vol",
-        volume=list(range(2))
+        volume=list(range(3))
     )
     eval_dataset = ReferentialGamePyTorchDataset(
         directory="/data/hzhu2/referential-game/dev",
