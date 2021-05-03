@@ -5,7 +5,7 @@ from random import randint
 
 import numpy as np
 from shapeworld.world.world import World
-from typing import OrderedDict
+from typing import List, OrderedDict, Union
 from PIL import Image
 
 import tqdm
@@ -315,7 +315,7 @@ class ReferentialGameDataset(Dataset):
         return html
 
 class ReferentialGamePyTorchDataset(torch.utils.data.Dataset):
-    def __init__(self, directory: str):
+    def __init__(self, directory: str, filename: str, volume: Union[int, List[int]]):
         self.directory = directory
         # with open(os.join.path(directory, "captions.txt"), "r") as f:
         #     for line in f:
@@ -324,13 +324,28 @@ class ReferentialGamePyTorchDataset(torch.utils.data.Dataset):
         #         self.captions.append(line.stripe())
         # with open(os.join.path(directory, "worlds.pkl"), "rb") as f:
         #     self.worlds = pickle.load(f)
-        with open(os.path.join(directory, "generated_middle.pkl"), "rb") as f:
-            self.data = pickle.load(f)
+        if isinstance(volume, int):
+            with open(os.path.join(directory, f"{filename}{volume}.pkl"), "rb") as f:
+                self.data = pickle.load(f)
+        else:
+            self.data = None
+            for vol in tqdm.tqdm(volume):
+                with open(os.path.join(directory, f"{filename}{vol}.pkl"), "rb") as f:
+                    if self.data is None:
+                        self.data = pickle.load(f)
+                    else:
+                        vol_data = pickle.load(f)
+                        for i in self.data:
+                            if isinstance(self.data[i], list):
+                                self.data[i] += vol_data[i]
+                            else:
+                                self.data[i] = np.concatenate(
+                                    [self.data[i], vol_data[i]], axis=0
+                                )
         # self.worlds = self.data['world']
         self.world_models = self.data['world_model']
         self.target_ids = self.data['target_id']
         self.captions = self.data["caption"]
-        assert len(self.captions) == len(self.worlds)
 
     def __getitem__(self, index: int):
         world = World.from_model(self.world_models[index]).get_array()

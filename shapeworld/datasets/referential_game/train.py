@@ -11,6 +11,9 @@ from transformers import BertModel, BertTokenizerFast
 from shapeworld.datasets.referential_game.coordconv import CoordConv2d, AddCoords
 
 
+import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 class CoordConvNet(nn.Module):
     def __init__(self, x_dim=224, y_dim=224):
         super(CoordConvNet, self).__init__()
@@ -55,10 +58,11 @@ class RGListener(nn.Module):
 
         # image encoder
         self.image_encoder = nn.Sequential(
-            *list(models.resnet18(pretrained=True).children())[:-2])
-        
-        for p in self.image_encoder.parameters():
-            p.requires_grad_ = False
+            *list(models.resnet18(pretrained=True).children())[:-2]
+        )
+
+        # position embedding
+        self.pos_emb = nn.Parameter(torch.randn(64, 7 * 7))
         
 
         # caption encoder
@@ -71,7 +75,7 @@ class RGListener(nn.Module):
         self.mlp = nn.Sequential(
             nn.Linear(768, 256),
             nn.ReLU(),
-            nn.Linear(256, 512)
+            nn.Linear(256, 576)
         )
 
         # trainer
@@ -87,11 +91,15 @@ class RGListener(nn.Module):
         training: bool = False
         ) -> Tuple[torch.Tensor, float]:
 
+        batch_size = images.size()[0]
+
         tokenized_text = self.tokenizer(
             text, return_tensors="pt", padding=True).to('cuda')
         encoded_text = self.bert(**tokenized_text).pooler_output
 
         encoded_images = self.image_encoder(images.cuda()).view(-1, 512, 7 * 7)
+        encoded_images = torch.cat([encoded_images,
+                                    self.pos_emb.expand(batch_size, -1, -1)], dim=1)
 
         logits = torch.matmul(self.mlp(encoded_text).unsqueeze(1), encoded_images).squeeze(1)
 
@@ -111,7 +119,7 @@ def quantize_coordinates(x: torch.Tensor):
 def eval(model: RGListener, dataset: ReferentialGamePyTorchDataset, batch_size=128) -> float:
     with torch.no_grad():
         dataloader = torch.utils.data.DataLoader(
-            dataset, batch_size=batch_size, pin_memory=True)
+            dataset, batch_size=batch_size, num_workers=6, pin_memory=True)
         losses = []
         accuracies = []
         for batch in dataloader:
@@ -124,26 +132,48 @@ def eval(model: RGListener, dataset: ReferentialGamePyTorchDataset, batch_size=1
 
 
 def train(model: RGListener, dataset: ReferentialGamePyTorchDataset,
-          eval_dataset: ReferentialGamePyTorchDataset, batch_size=256, n_epochs=100):
+          eval_dataset: ReferentialGamePyTorchDataset, batch_size=256,
+          n_epochs=2, eval_interval=400):
     dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=batch_size, pin_memory=True)
+        dataset, batch_size=batch_size, shuffle=True, num_workers=6, pin_memory=True)
     running_average = 0.06
+    iteration = 0
+    eval_loss = 0
+    eval_acc = 0
+    max_eval_acc = 0
+    best_model = None
     for epoch in range(n_epochs):
-        pbar = tqdm.tqdm(dataloader, desc=f"running_average={running_average}")
+        print(f"Epoch {epoch}")
+        pbar = tqdm.tqdm(
+            dataloader,
+            desc=f"train_loss={running_average} eval_loss={eval_loss} eval_acc={eval_acc}"
+        )
         for batch in pbar:
             _, loss = model(batch["image_tensor"], batch["caption"],
                             quantize_coordinates(batch["target_coordinates"]), training=True)
             running_average = running_average * 0.99 + loss * 0.01
-            pbar.set_description(f"running_average={running_average}")
-        print(f"dev set: {eval(model, eval_dataset)}")
+            iteration += 1
+            if iteration % eval_interval == 0:
+                eval_loss, eval_acc = eval(model, eval_dataset)
+                if eval_acc > max_eval_acc:
+                    best_model = model.state_dict()
+            pbar.set_description(
+                f"train_loss={running_average} eval_loss={eval_loss} eval_acc={eval_acc}"
+            )
+    return best_model
 
 
 if __name__ == '__main__':
     model = RGListener().cuda()
     # model.load_state_dict(torch.load("model.pt"))
     dataset = ReferentialGamePyTorchDataset(
-        directory="/data/hzhu2/referential-game/train")
+        directory="/data/hzhu2/referential-game/train",
+        filename="generated_1M_vol",
+        volume=list(range(2))
+    )
     eval_dataset = ReferentialGamePyTorchDataset(
-        directory="/data/hzhu2/referential-game/dev")
-    train(model, dataset, eval_dataset)
-    torch.save(model.state_dict(), "model.pt")
+        directory="/data/hzhu2/referential-game/dev",
+        filename="generated_10K_vol",
+        volume=10)
+    best_model = train(model, dataset, eval_dataset)
+    torch.save(best_model, "model.pt")
