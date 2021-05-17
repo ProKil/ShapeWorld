@@ -14,7 +14,7 @@ if __name__ == '__main__':
     world_models = generated['world_model']
     target_ids = generated['target_id']
     captions = generated["caption"]
-    directory = "/data/hzhu2/referential-game/train/"
+    directory = "/projects/tir4/users/hzhu2/referential-game/train/"
     # directory = "./"
 
     with open(os.path.join(directory, f"generated_1M_vol{sys.argv[1]}.pkl"), "wb") as f:
