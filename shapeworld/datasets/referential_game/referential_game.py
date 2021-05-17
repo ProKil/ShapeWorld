@@ -5,7 +5,7 @@ from random import randint
 
 import numpy as np
 from shapeworld.world.world import World
-from typing import OrderedDict
+from typing import List, OrderedDict, Union
 from PIL import Image
 
 import tqdm
@@ -51,8 +51,12 @@ class ReferentialGameDataset(Dataset):
         caption_size=31,
         # vocabulary=('.', 'a', 'above', 'all', 'an', 'and', 'are', 'as', 'at', 'behind', 'below', 'besides', 'bigger', 'biggest', 'blue', 'but', 'circle', 'circles', 'closer', 'closest', 'color', 'cross', 'crosses', 'cyan', 'darker', 'darkest', 'different', 'eight', 'either', 'ellipse', 'ellipses', 'exactly', 'exists', 'farther', 'farthest', 'few', 'five', 'four', 'from', 'front', 'gray', 'green', 'half', 'if', 'in', 'is', 'least', 'left', 'leftmost', 'less', 'lighter', 'lightest', 'lower', 'lowermost', 'magenta', 'many', 'more', 'most', 'no', 'none', 'not', 'of', 'one', 'only', 'or', 'pentagon', 'pentagons', 'quarter', 'quarters', 'rectangle', 'rectangles', 'red', 'right', 'rightmost', 'same', 'semicircle', 'semicircles', 'seven', 'shape', 'shapes', 'six', 'smaller', 'smallest', 'square', 'squares', 'than', 'the', 'there', 'third', 'thirds', 'three', 'to', 'triangle', 'triangles', 'twice', 'two', 'upper', 'uppermost', 'yellow', 'zero'),
         pixel_noise_stddev=None,
+        render_images=False
     ):
-        values = dict(world_model='model', target_id='alternatives(int)', caption='language', caption_length='alternatives(int)')
+        if render_images:
+            values = dict(world='world', world_model='model', target_id='alternatives(int)', caption='language', caption_length='alternatives(int)')
+        else:
+            values = dict(world_model='model', target_id='alternatives(int)', caption='language', caption_length='alternatives(int)')
         vectors = dict(caption=caption_size)
         super(ReferentialGameDataset, self).__init__(values=values, world_size=world_size, vectors=vectors, pixel_noise_stddev=pixel_noise_stddev)
         
@@ -190,7 +194,8 @@ class ReferentialGameDataset(Dataset):
             batch['caption'][i] = caption
             batch['caption_length'][i] = len(caption)
 
-            # batch['world'][i] = self.apply_pixel_noise(world=world.get_array(world_array=batch['world'][i]))
+            if 'world' in batch:
+                batch['world'][i] = self.apply_pixel_noise(world=world.get_array(world_array=batch['world'][i]))
             if include_model:
                 batch['world_model'][i] = world.model()
 
@@ -315,7 +320,7 @@ class ReferentialGameDataset(Dataset):
         return html
 
 class ReferentialGamePyTorchDataset(torch.utils.data.Dataset):
-    def __init__(self, directory: str):
+    def __init__(self, directory: str, filename: str, volume: Union[int, List[int]]):
         self.directory = directory
         # with open(os.join.path(directory, "captions.txt"), "r") as f:
         #     for line in f:
@@ -324,13 +329,28 @@ class ReferentialGamePyTorchDataset(torch.utils.data.Dataset):
         #         self.captions.append(line.stripe())
         # with open(os.join.path(directory, "worlds.pkl"), "rb") as f:
         #     self.worlds = pickle.load(f)
-        with open(os.path.join(directory, "generated_middle.pkl"), "rb") as f:
-            self.data = pickle.load(f)
+        if isinstance(volume, int):
+            with open(os.path.join(directory, f"{filename}{volume}.pkl"), "rb") as f:
+                self.data = pickle.load(f)
+        else:
+            self.data = None
+            for vol in tqdm.tqdm(volume):
+                with open(os.path.join(directory, f"{filename}{vol}.pkl"), "rb") as f:
+                    if self.data is None:
+                        self.data = pickle.load(f)
+                    else:
+                        vol_data = pickle.load(f)
+                        for i in self.data:
+                            if isinstance(self.data[i], list):
+                                self.data[i] += vol_data[i]
+                            else:
+                                self.data[i] = np.concatenate(
+                                    [self.data[i], vol_data[i]], axis=0
+                                )
         # self.worlds = self.data['world']
         self.world_models = self.data['world_model']
         self.target_ids = self.data['target_id']
         self.captions = self.data["caption"]
-        assert len(self.captions) == len(self.worlds)
 
     def __getitem__(self, index: int):
         world = World.from_model(self.world_models[index]).get_array()

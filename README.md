@@ -5,6 +5,8 @@
 ```bash
 git clone --recursive https://github.com/AlexKuhnle/ShapeWorld.git
 pip3 install -e .  # optional: .[full] or .[full-gpu]
+cd ShapeWorld/shapeworld/world
+pip3 install -e . # drawcpp
 ```
 
 
