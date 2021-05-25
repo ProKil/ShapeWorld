@@ -320,7 +320,13 @@ class ReferentialGameDataset(Dataset):
         return html
 
 class ReferentialGamePyTorchDataset(torch.utils.data.Dataset):
-    def __init__(self, directory: str, filename: str, volume: Union[int, List[int]]):
+    def __init__(
+        self,
+        directory: str,
+        filename: str,
+        volume: Union[int, List[int]],
+        image_size: int=224,
+        normalize: bool=True):
         self.directory = directory
         # with open(os.join.path(directory, "captions.txt"), "r") as f:
         #     for line in f:
@@ -351,15 +357,19 @@ class ReferentialGamePyTorchDataset(torch.utils.data.Dataset):
         self.world_models = self.data['world_model']
         self.target_ids = self.data['target_id']
         self.captions = self.data["caption"]
+        self.image_size = image_size
+        self.normalize = normalize
 
     def __getitem__(self, index: int):
         world = World.from_model(self.world_models[index]).get_array()
         input_image = World.get_image(world.transpose(1, 0, 2))
         preprocess = transforms.Compose([
-            transforms.Resize(224),
-            transforms.ToTensor(),
+            transforms.Resize(self.image_size)
+        ] + ([
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ])
+        ] if self.normalize else [
+        ]) + [transforms.ToTensor()]
+        )
         image_tensor = preprocess(input_image)
         return dict(
             image_tensor=image_tensor,
