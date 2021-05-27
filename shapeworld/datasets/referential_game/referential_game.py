@@ -361,11 +361,11 @@ class ReferentialGamePyTorchDataset(torch.utils.data.Dataset):
         self.normalize = normalize
     
     def get_array(self, index: int):
-        return World.from_model(self.world_models[index]).get_array()
+        return World.from_model(self.world_models[index]).get_array().transpose(1, 0, 2)
 
     def __getitem__(self, index: int):
         world = self.get_array(index)
-        input_image = World.get_image(world.transpose(1, 0, 2))
+        input_image = World.get_image(world)
         preprocess = transforms.Compose([
             transforms.Resize(self.image_size)
         ] + ([
