@@ -359,9 +359,12 @@ class ReferentialGamePyTorchDataset(torch.utils.data.Dataset):
         self.captions = self.data["caption"]
         self.image_size = image_size
         self.normalize = normalize
+    
+    def get_array(self, index: int):
+        return World.from_model(self.world_models[index]).get_array()
 
     def __getitem__(self, index: int):
-        world = World.from_model(self.world_models[index]).get_array()
+        world = self.get_array(index)
         input_image = World.get_image(world.transpose(1, 0, 2))
         preprocess = transforms.Compose([
             transforms.Resize(self.image_size)
