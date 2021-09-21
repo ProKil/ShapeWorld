@@ -420,13 +420,18 @@ def draw(
                 if inside_square((i, j), topleft_outer, bottomright_outer) and not inside_square((i, j), topleft_inner, bottomright_inner):
                     image_array[i][j] = border_color
     elif shape == "circle":
-        center_ = (center[0] * H, center[1] * W)
-        radius_outer = size + border_weight / 2
-        radius_inner = size - border_weight / 2
-        for i in range(H):
-            for j in range(W):
-                if inside_circle((i, j), center_, radius_outer)  and not inside_circle((i, j), center_, radius_inner):
-                    image_array[i][j] = border_color
+        # center_ = (center[0] * H, center[1] * W)
+        # radius_outer = size + border_weight / 2
+        # radius_inner = size - border_weight / 2
+        # for i in range(max(0, int(center_[0] - radius_outer)),
+        #                min(int(center_[0] + radius_outer + 1), H)):
+        #     for j in range(max(0, int(center_[1] - radius_outer)),
+        #                    min(int(center_[1] + radius_outer + 1), H)):
+        #         if inside_circle((i, j), center_, radius_outer)  and not inside_circle((i, j), center_, radius_inner):
+        #             image_array[i][j] = border_color
+        from shapeworld.world.drawcpp import draw_circle
+        draw_circle(image_array, (H, W), tuple(border_color), center, border_weight, size)
+        
     else:
         raise NotImplementedError(shape)
     return image_array

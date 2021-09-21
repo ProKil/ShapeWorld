@@ -1,4 +1,3 @@
-from interactlang.speaker.recurrent_speaker import plot_guess
 from io import BytesIO
 import os
 import pickle
@@ -321,6 +320,16 @@ class ReferentialGameDataset(Dataset):
         )
         return html
 
+def plot_guess(world_array, center):
+  return World.get_image(
+    world_array=draw(
+      world_array,
+      shape="circle",
+      border_color=np.ones(3),
+      center=center,
+      border_weight=2,
+      size=7))
+      
 class ReferentialGamePyTorchDataset(torch.utils.data.Dataset):
     def __init__(
         self,
@@ -372,21 +381,30 @@ class ReferentialGamePyTorchDataset(torch.utils.data.Dataset):
         input_image = World.get_image(world)
         preprocess = transforms.Compose([
             transforms.Resize(self.image_size)
+        ] + [
+            transforms.ToTensor()
         ] + ([
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ] if self.normalize else [
-        ]) + [transforms.ToTensor()]
+        ])
         )
         if self.draw_target:
-            target_image = plot_guess(input_image, list(self.world_models[index]["entities"][self.target_ids[index]]["center"].values()))
+            target_image = plot_guess(world, list(self.world_models[index]["entities"][self.target_ids[index]]["center"].values()))
             target_tensor = preprocess(target_image)
         image_tensor = preprocess(input_image)
-        return dict(
-            image_tensor=image_tensor,
-            target_tensor=target_tensor if self.draw_target else None,
-            caption=' '.join(self.captions[index]),
-            target_coordinates=np.array(list(self.world_models[index]["entities"][self.target_ids[index]]["center"].values()))
-        )
+        if self.draw_target:
+            return dict(
+                image_tensor=image_tensor,
+                target_tensor=target_tensor,
+                caption=' '.join(self.captions[index]),
+                target_coordinates=np.array(list(self.world_models[index]["entities"][self.target_ids[index]]["center"].values()))
+            )
+        else:
+            return dict(
+                image_tensor=image_tensor,
+                caption=' '.join(self.captions[index]),
+                target_coordinates=np.array(list(self.world_models[index]["entities"][self.target_ids[index]]["center"].values()))
+            )
 
     def __len__(self):
         return len(self.captions)

@@ -188,6 +188,46 @@ void draw(
     return;
 }
 
+bool inside_circle(Point point, Point center, double radius) {
+    return std::pow((point.first + 0.5 - center.first), 2) 
+         + std::pow((point.second + 0.5 - center.second), 2)
+         <= radius * radius;
+}
+
+void draw_circle(
+    py::array_t<float> world_array,
+    Point world_size,
+    Color border_color,
+    Point center,
+    double border_weight,
+    double size
+    ) {
+        // check array 
+        auto r = world_array.mutable_unchecked<3>(); 
+
+        Point center_(
+            center.first * world_size.first,
+            center.second * world_size.second
+        );
+
+        double radius_outer = size + border_weight / 2;
+        double radius_inner = size - border_weight / 2;
+        for (int i = std::max(0, int(center_.first - radius_outer));
+             i < std::min(int(world_size.first), int(center_.first + radius_outer + 1));
+             i++)
+            for (int j = std::max(0, int(center_.second - radius_outer));
+                 j < std::min(int(world_size.second), int(center_.second + radius_outer + 1));
+                 j++) 
+                if (inside_circle(Point(i, j), center_, radius_outer) && 
+                   !inside_circle(Point(i, j), center_, radius_inner)) {
+                    r(i, j, 0) = std::get<0>(border_color);
+                    r(i, j, 1) = std::get<1>(border_color);
+                    r(i, j, 2) = std::get<2>(border_color);
+                }
+        return;
+    }
+
 PYBIND11_MODULE(drawcpp, m) {
     m.def("draw", &draw);
+    m.def("draw_circle", &draw_circle);
 }
