@@ -1,9 +1,11 @@
+from interactlang.speaker.recurrent_speaker import plot_guess
 from io import BytesIO
 import os
 import pickle
 from random import randint
 
 import numpy as np
+from shapeworld.util import draw
 from shapeworld.world.world import World
 from typing import List, OrderedDict, Union
 from PIL import Image
@@ -326,7 +328,8 @@ class ReferentialGamePyTorchDataset(torch.utils.data.Dataset):
         filename: str,
         volume: Union[int, List[int]],
         image_size: int=224,
-        normalize: bool=True):
+        normalize: bool=True,
+        draw_target: bool=False):
         self.directory = directory
         # with open(os.join.path(directory, "captions.txt"), "r") as f:
         #     for line in f:
@@ -359,6 +362,7 @@ class ReferentialGamePyTorchDataset(torch.utils.data.Dataset):
         self.captions = self.data["caption"]
         self.image_size = image_size
         self.normalize = normalize
+        self.draw_target = draw_target
     
     def get_array(self, index: int):
         return World.from_model(self.world_models[index]).get_array().transpose(1, 0, 2)
@@ -373,9 +377,13 @@ class ReferentialGamePyTorchDataset(torch.utils.data.Dataset):
         ] if self.normalize else [
         ]) + [transforms.ToTensor()]
         )
+        if self.draw_target:
+            target_image = plot_guess(input_image, list(self.world_models[index]["entities"][self.target_ids[index]]["center"].values()))
+            target_tensor = preprocess(target_image)
         image_tensor = preprocess(input_image)
         return dict(
             image_tensor=image_tensor,
+            target_tensor=target_tensor if self.draw_target else None,
             caption=' '.join(self.captions[index]),
             target_coordinates=np.array(list(self.world_models[index]["entities"][self.target_ids[index]]["center"].values()))
         )
