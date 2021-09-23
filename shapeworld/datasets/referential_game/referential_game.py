@@ -389,7 +389,7 @@ class ReferentialGamePyTorchDataset(torch.utils.data.Dataset):
         ])
         )
         if self.draw_target:
-            target_image = plot_guess(world, list(self.world_models[index]["entities"][self.target_ids[index]]["center"].values()))
+            target_image = plot_guess(world.transpose(1, 0, 2), list(self.world_models[index]["entities"][self.target_ids[index]]["center"].values()))
             target_tensor = preprocess(target_image)
         image_tensor = preprocess(input_image)
         if self.draw_target:
